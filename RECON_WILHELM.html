@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>RECON · WILHELM</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg:       #0d0f13;
+    --surface:  #161b22;
+    --surface2: #1e242d;
+    --border:   #2a3140;
+    --text:     #e2e8f0;
+    --muted:    #6b7888;
+    --accent:   #f59e0b;
+    --short:    #ef4444;
+    --short-bg: rgba(239,68,68,0.12);
+    --short-border: rgba(239,68,68,0.35);
+    --over:     #22c55e;
+    --over-bg:  rgba(34,197,94,0.10);
+    --over-border: rgba(34,197,94,0.30);
+    --neutral-bg:     rgba(245,158,11,0.08);
+    --neutral-border: rgba(245,158,11,0.25);
+    --tap: 48px;   /* minimum tap target */
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    /* leave room for bottom nav */
+    padding-bottom: 72px;
+  }
+
+  /* ── HEADER ──────────────────────────────────────────── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 52px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .brand {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .brand span { color: var(--muted); font-weight: 400; }
+  .header-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: right;
+    line-height: 1.5;
+  }
+
+  /* ── BOTTOM TAB BAR (mobile-first) ───────────────────── */
+  .tabs {
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 200;
+    height: 60px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 -4px 20px rgba(0,0,0,.4);
+  }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: var(--muted);
+    transition: color .15s;
+    padding: 6px 4px;
+    -webkit-tap-highlight-color: transparent;
+    border: none;
+    background: none;
+  }
+  .tab .tab-icon { font-size: 20px; line-height: 1; }
+  .tab.active { color: var(--accent); }
+  .tab.active .tab-underline { background: var(--accent); }
+  .tab-underline {
+    width: 24px; height: 2px;
+    border-radius: 2px;
+    background: transparent;
+    margin-top: 2px;
+    transition: background .15s;
+  }
+
+  /* ── MAIN CONTENT ────────────────────────────────────── */
+  .main { max-width: 900px; margin: 0 auto; padding: 12px 12px 16px; }
+
+  /* ── STATS BAR ───────────────────────────────────────── */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .stat-card .val {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+  .stat-card .lbl {
+    font-size: 10px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .stat-card.shorts .val { color: var(--short); }
+  .stat-card.overs  .val { color: var(--over); }
+
+  /* ── SEARCH & FILTER ─────────────────────────────────── */
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .search-wrap { flex: 1; min-width: 0; position: relative; }
+  .search-wrap svg {
+    position: absolute; left: 12px; top: 50%;
+    transform: translateY(-50%); opacity: .4; pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0 12px 0 36px;
+    height: var(--tap);
+    color: var(--text);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+
+  .filter-btns { display: flex; gap: 6px; }
+  .filter-btn {
+    height: var(--tap);
+    min-width: var(--tap);
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+
+  /* ── ITEM CARD ───────────────────────────────────────── */
+  .items-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .item-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .item-card.is-short { border-color: var(--short-border); background: var(--short-bg); }
+  .item-card.is-over  { border-color: var(--over-border);  background: var(--over-bg); }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    min-height: var(--tap);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .item-name {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    flex: 1;
+  }
+  .status-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .is-short .status-badge { background: var(--short-bg); color: var(--short); border: 1px solid var(--short-border); }
+  .is-over  .status-badge { background: var(--over-bg);  color: var(--over);  border: 1px solid var(--over-border); }
+  .status-badge.pending   { background: rgba(107,120,136,.15); color: var(--muted); border: 1px solid var(--border); }
+
+  /* ── CARD META ROW ───────────────────────────────────── */
+  .card-meta {
+    display: flex;
+    gap: 20px;
+    padding: 0 14px 12px;
+    flex-wrap: wrap;
+  }
+  .meta-item { display: flex; flex-direction: column; }
+  .meta-item .lbl {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .meta-item .val {
+    font-family: 'DM Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+  }
+  .val.neg { color: var(--short); }
+
+  /* ── RECON DIFF ──────────────────────────────────────── */
+  .recon-diff { padding: 6px 14px 12px; }
+  .diff-label {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .diff-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+  }
+  .diff-value.short { color: var(--short); }
+  .diff-value.over  { color: var(--over); }
+
+  /* ── INPUT SECTION ───────────────────────────────────── */
+  .card-inputs {
+    border-top: 1px solid var(--border);
+    padding: 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .input-group { display: flex; flex-direction: column; gap: 6px; }
+  .input-group label {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .input-group input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0 14px;
+    height: 52px;            /* large tap target */
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 20px;         /* big number on phone */
+    width: 100%;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+  .input-group input::-webkit-outer-spin-button,
+  .input-group input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .input-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
+  .input-full { grid-column: 1 / -1; }
+
+  /* ── SECTION DIVIDER ─────────────────────────────────── */
+  .section-divider {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    margin: 8px 0;
+    font-weight: 700;
+  }
+
+  /* ── IMPORT SECTION ──────────────────────────────────── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .import-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-bottom: 12px;
+  }
+  .import-box h3 {
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase;
+    margin-bottom: 6px; color: var(--accent);
+  }
+  .import-box p { font-size: 14px; color: var(--muted); margin-bottom: 10px; line-height: 1.5; }
+
+  .paste-area {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    min-height: 100px;
+    resize: vertical;
+    outline: none;
+  }
+  .paste-area:focus { border-color: var(--accent); }
+
+  /* ── BUTTONS ─────────────────────────────────────────── */
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    padding: 0 24px;
+    height: 52px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: opacity .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-primary:active { opacity: .8; }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0 18px;
+    height: 48px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all .15s;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-secondary:active { border-color: var(--accent); color: var(--accent); }
+
+  .msg { font-size: 13px; padding: 10px 12px; border-radius: 8px; }
+  .msg.ok  { background: var(--over-bg);   color: var(--over); }
+  .msg.err { background: var(--short-bg);  color: var(--short); }
+
+  /* ── FLOATING SAVE ───────────────────────────────────── */
+  .fab {
+    position: fixed;
+    bottom: 70px; right: 16px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 50px;
+    padding: 0 20px;
+    height: 48px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(245,158,11,.4);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    z-index: 199;
+    transition: transform .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .fab:active { transform: scale(.96); }
+  .fab-count {
+    background: #000;
+    color: var(--accent);
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  /* ── PROGRESS ────────────────────────────────────────── */
+  .progress-bar-wrap {
+    background: var(--border);
+    border-radius: 4px;
+    height: 5px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    background: var(--accent);
+    height: 100%;
+    border-radius: 4px;
+    transition: width .3s ease;
+  }
+  .progress-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-align: right;
+  }
+
+  /* ── SUMMARY TABLE — mobile card layout ─────────────── */
+  .summary-table { width: 100%; border-collapse: collapse; }
+  .summary-table th {
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  .summary-table td {
+    padding: 10px 10px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .summary-table td:not(:first-child) {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .summary-table tr.short-row td { color: var(--short); }
+  .summary-table tr.over-row  td { color: var(--over); }
+  /* hide cost columns on small screens */
+  .summary-table .col-cost,
+  .summary-table .col-rand  { display: none; }
+
+  /* ── IMPORT TABLE ────────────────────────────────────── */
+  /* Entry table inputs — larger on mobile */
+  #entryTableBody input[type=number] {
+    font-size: 16px !important;  /* prevents iOS zoom */
+    height: 44px !important;
+    border-radius: 8px !important;
+  }
+
+  /* ── DESKTOP OVERRIDES (600px+) ─────────────────────── */
+  @media (min-width: 600px) {
+    body { padding-bottom: 0; }
+
+    /* Tabs go back to top */
+    .tabs {
+      position: sticky;
+      top: 52px;
+      bottom: auto;
+      height: auto;
+      border-top: none;
+      border-bottom: 1px solid var(--border);
+      box-shadow: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    .tab {
+      flex-direction: row;
+      gap: 6px;
+      padding: 12px 20px;
+      font-size: 13px;
+      height: auto;
+      border-bottom: 3px solid transparent;
+    }
+    .tab.active { border-bottom-color: var(--accent); }
+    .tab .tab-icon { font-size: 16px; }
+    .tab-underline { display: none; }
+
+    .fab { bottom: 24px; }
+
+    /* Show cost columns on wider screens */
+    .summary-table .col-cost,
+    .summary-table .col-rand { display: table-cell; }
+
+    .card-inputs { grid-template-columns: repeat(4, 1fr); }
+    .input-full  { grid-column: 1 / 3; }
+
+    .main { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="brand">RECON <span>· WILHELM</span></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+      <div class="header-date" id="dateDisplay"></div>
+      <div id="syncStatus" onclick="resetFirebaseConfig()" title="Tap to change sync settings"
+        style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:4px;transition:opacity .2s;">
+        <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;"></span>
+        <span>Not connected</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchPage('count', this)">
+    <span class="tab-icon">📦</span>
+    <span>Count</span>
+    <div class="tab-underline"></div>
+  </div>
+  <div class="tab" onclick="switchPage('import', this)">
+    <span class="tab-icon">📋</span>
+    <span>Import</span>
+    <div class="tab-underline"></div>
+  </div>
+  <div class="tab" onclick="switchPage('summary', this)">
+    <span class="tab-icon">📊</span>
+    <span>Summary</span>
+    <div class="tab-underline"></div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- COUNT PAGE -->
+  <div class="page active" id="page-count">
+    <div class="stats-bar">
+      <div class="stat-card shorts">
+        <div class="val" id="stat-shorts">0</div>
+        <div class="lbl">🔴 Shorts</div>
+      </div>
+      <div class="stat-card overs">
+        <div class="val" id="stat-overs">0</div>
+        <div class="lbl">🟢 Overs</div>
+      </div>
+      <div class="stat-card matched">
+        <div class="val" id="stat-counted">0</div>
+        <div class="lbl">✅ Counted</div>
+      </div>
+    </div>
+
+    <!-- Rand value banners -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:10px 14px;">
+        <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--short);margin-bottom:3px;font-weight:700;">💸 Total Loss (R)</div>
+        <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--short);" id="stat-loss">R 0</div>
+      </div>
+      <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:10px;padding:10px 14px;">
+        <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--over);margin-bottom:3px;font-weight:700;">📈 Total Over (R)</div>
+        <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--over);" id="stat-gain">R 0</div>
+      </div>
+    </div>
+
+    <div class="progress-text" id="progressText">0 / 67 items counted</div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar" style="width:0%"></div></div>
+
+    <div class="controls">
+      <div class="search-wrap">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" class="search-input" id="searchInput" placeholder="Search items…" oninput="renderItems()">
+      </div>
+      <div class="filter-btns">
+        <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+        <button class="filter-btn" onclick="setFilter('short', this)">🔴</button>
+        <button class="filter-btn" onclick="setFilter('over', this)">🟢</button>
+        <button class="filter-btn" onclick="setFilter('pending', this)">⏳</button>
+      </div>
+    </div>
+
+    <div class="items-list" id="itemsList"></div>
+  </div>
+
+  <!-- IMPORT PAGE — single unified sheet -->
+  <div class="page" id="page-import">
+    <div class="import-box" style="padding:0;overflow:hidden;margin-bottom:80px;">
+
+      <!-- ── TOP HEADER ──────────────────────────────────── -->
+      <div style="padding:14px 16px 12px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div>
+          <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:4px;">Import &amp; Count Sheet</div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.5;margin:0;">
+            Paste your IQ Report below to update <strong style="color:var(--text)">On Hand</strong>, <strong style="color:var(--text)">Ltst Cost</strong> &amp; <strong style="color:var(--text)">Del Col</strong>.<br>
+            Items matched by <strong style="color:var(--accent)">Description</strong> or <strong style="color:var(--accent)">Code</strong>. Then fill count quantities in the table.
+          </p>
+        </div>
+        <button class="btn-secondary" style="padding:7px 14px;font-size:12px;white-space:nowrap;" onclick="exportCSV()">⬇️ CSV</button>
+      </div>
+
+      <!-- ── COLUMN FORMAT HINT ───────────────────────────── -->
+      <div style="padding:9px 16px;border-bottom:1px solid var(--border);background:rgba(245,158,11,0.04);display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">IQ Report columns:</span>
+        <div style="display:flex;gap:0;">
+          <span style="font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:3px 0 0 3px;color:var(--muted);">DESCRIPT</span>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-left:none;padding:2px 8px;color:var(--muted);">CODE</span>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;background:var(--surface2);border:1px solid var(--border);border-left:none;padding:2px 8px;color:var(--text);">LTSTCOST</span>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.5);border-left:none;padding:2px 8px;color:var(--accent);">ONHAND</span>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.5);border-left:none;padding:2px 8px;border-radius:0 3px 3px 0;color:var(--accent);">DELCOL</span>
+        </div>
+      </div>
+
+      <!-- ── PASTE AREA ──────────────────────────────────── -->
+      <div style="padding:12px 16px 0;">
+        <textarea id="pasteArea" placeholder="Paste IQ Report data here (select all in Excel → copy → paste)…"
+          style="width:100%;min-height:100px;max-height:180px;resize:vertical;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;line-height:1.5;outline:none;"></textarea>
+      </div>
+
+      <!-- ── ACTIONS + RESULT MSG ────────────────────────── -->
+      <div style="padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+        <button class="btn-primary" style="padding:9px 20px;" onclick="processSmartImport()">⚡ Extract &amp; Apply</button>
+        <button class="btn-secondary" onclick="previewImport()">👁 Preview</button>
+        <button class="btn-secondary" onclick="document.getElementById('pasteArea').value='';document.getElementById('importPreview').style.display='none';document.getElementById('importMsg').innerHTML='';">✕ Clear</button>
+        <div id="importMsg" style="flex:1;min-width:160px;"></div>
+      </div>
+
+      <!-- ── PREVIEW (collapsed by default) ─────────────── -->
+      <div id="importPreview" style="display:none;border-bottom:1px solid var(--border);">
+        <div style="background:var(--surface2);padding:6px 16px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:700;">Preview — matched items</div>
+        <div id="importPreviewBody" style="padding:10px 16px;font-size:13px;max-height:240px;overflow-y:auto;"></div>
+      </div>
+
+      <!-- ── COUNT TABLE HEADER ──────────────────────────── -->
+      <div style="padding:10px 16px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--surface2);">
+        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);font-weight:700;">✏️ Count Quantities</div>
+        <div style="display:flex;gap:8px;">
+          <div style="position:relative;">
+            <svg style="position:absolute;left:8px;top:50%;transform:translateY(-50%);opacity:.4;" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input type="text" id="entrySearch" placeholder="Search…" oninput="renderEntryTable()"
+              style="background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:6px 10px 6px 26px;color:var(--text);font-family:'Barlow Condensed',sans-serif;font-size:13px;width:130px;outline:none;">
+          </div>
+          <button class="btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="resetCounts()">🔄 Reset</button>
+        </div>
+      </div>
+
+      <!-- ── TABLE BODY ──────────────────────────────────── -->
+      <div id="entryTableBody"></div>
+
+    </div>
+  </div>
+
+  <!-- SUMMARY PAGE -->
+  <div class="page" id="page-summary">
+    <div class="stats-bar">
+      <div class="stat-card shorts">
+        <div class="val" id="sum-shorts">0</div>
+        <div class="lbl">🔴 Shorts</div>
+      </div>
+      <div class="stat-card overs">
+        <div class="val" id="sum-overs">0</div>
+        <div class="lbl">🟢 Overs</div>
+      </div>
+      <div class="stat-card matched">
+        <div class="val" id="sum-matched">0</div>
+        <div class="lbl">✅ Matched</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:13px;color:var(--muted)">Showing only counted items</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-secondary" onclick="exportXLS()" style="display:flex;align-items:center;gap:5px;font-size:13px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+          XLS
+        </button>
+        <button class="btn-secondary" onclick="exportPDF()" style="display:flex;align-items:center;gap:5px;font-size:13px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="12" x2="9" y2="18"/><line x1="15" y1="12" x2="15" y2="18"/></svg>
+          PDF
+        </button>
+        <button class="btn-secondary" onclick="exportCSV()" style="display:flex;align-items:center;gap:5px;font-size:13px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV
+        </button>
+      </div>
+    </div>
+
+    <table class="summary-table" id="summaryTable">
+      <thead><tr><th>Item</th><th>Count</th><th>On Hand</th><th>Variance</th><th class="col-cost">Cost</th><th class="col-rand">Rand Value</th></tr></thead>
+      <tbody id="summaryBody"></tbody>
+    </table>
+  </div>
+
+</div><!-- /main -->
+
+<button class="fab" onclick="saveSession()" id="saveBtn">
+  💾 Save
+  <span class="fab-count" id="dirtyCount">0</span>
+</button>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────
+const ITEMS_RAW = [{"name":"CEMENT 5KG BAGS","onhand":897.0,"delcol":0},{"name":"CEMENT KBC 32.5N 50KG","onhand":9889.0,"delcol":314.0},{"name":"CEMENT DAMAGED KBC 32.5 50KG DAMAGED CEMENT","onhand":-12.0,"delcol":10.0},{"name":"CEMENT KBC 42.5N 50KG","onhand":-242.0,"delcol":205.0},{"name":"CEMENT DAMAGED KBC 42.5 50KG","onhand":-8.0,"delcol":0},{"name":"CEMENT BUILD IT 32.5R","onhand":145.0,"delcol":34.0},{"name":"CEMENT PPC 42.5N 50KG","onhand":158.0,"delcol":682.0},{"name":"CEMENT SEPHAKU 32.5N 50KG","onhand":-40.0,"delcol":120.0},{"name":"CEMENT SEPHAKU 42.5N 50KG","onhand":100.0,"delcol":40.0},{"name":"CEMENT SURECEM 32.5N 50KG","onhand":177.0,"delcol":70.0},{"name":"RHINO LITE 40 KG","onhand":587.0,"delcol":1.0},{"name":"BRICK BLOCK YARD PER/EACH","onhand":1406.0,"delcol":1109.0},{"name":"BRICK MAXI YARD PER/EACH","onhand":15415.0,"delcol":6155.0},{"name":"BRICK PAVING BEVEL BLACK 50MM EACH","onhand":10160.0,"delcol":3542.0},{"name":"BRICK PAVING BEVEL GREY 50MM (COARS/ROUGH)","onhand":4472.0,"delcol":0},{"name":"BRICK PAVING BEVEL GREY PREMIUM 50MM EACH","onhand":4160.0,"delcol":0},{"name":"BRICK PAVING BEVEL GREY SPLIT P/EACH","onhand":5300.0,"delcol":0},{"name":"BRICK PAVING BEVEL RED 50MM EACH","onhand":20135.0,"delcol":0},{"name":"BRICK PAVING I/LOCK GREY 60MM EACH","onhand":14175.0,"delcol":290.0},{"name":"BRICK STOCK CEMENT PER EACH YARD","onhand":-1052.0,"delcol":16750.0},{"name":"BRICK STOCK CEMENT 10MPA PER EACH","onhand":53976.0,"delcol":2000.0},{"name":"BRICK STOCK CEMENT 14MPA P/EACH","onhand":21405.0,"delcol":0},{"name":"BRICK STOCK CEMENT 14 MPA PER EACH HYPERBUILD","onhand":-24930.0,"delcol":7758.0},{"name":"BRICK STOCK CLAY PER EACH YARD","onhand":-56305.0,"delcol":73500.0},{"name":"BRICK STOCK SEMI FACE PREMIUM CLAY P/EACH","onhand":26312.0,"delcol":15000.0},{"name":"BRICK STOCK CLAY HALF PER/PALLET","onhand":-9.25,"delcol":2.0},{"name":"SPECIAL BRICK STOCK CLAY APOLLO KYA P/EACH","onhand":0,"delcol":0},{"name":"BRICK SEMI FACE VERONA SATIN P/EACH","onhand":505.0,"delcol":0},{"name":"BRICK SEMI FACE RAINBOW P/EACH","onhand":330.0,"delcol":0},{"name":"BRICK STOCK PLASTER BRICK P/EACH","onhand":3369.0,"delcol":0},{"name":"BRICK BASE KLINKER P/ EACH","onhand":3248.0,"delcol":0},{"name":"BRICK STOCK KILN PER EACH","onhand":7134.0,"delcol":0},{"name":"BRICKFORCE SABS 150X2.80MM","onhand":591.0,"delcol":166.0},{"name":"BRICKFORCE SABS 75X2.80MM","onhand":-40.0,"delcol":18.0},{"name":"PALLET BPB GYPSUM","onhand":7.0,"delcol":0},{"name":"BRICKFORCE SABS 230X2.80MM","onhand":134.0,"delcol":5.0},{"name":"PALLET EVERITE","onhand":14.0,"delcol":0},{"name":"PALLET PPC","onhand":70.0,"delcol":0},{"name":"PALLET AVENG INFRASET (REFUNDABLE)","onhand":62.0,"delcol":0},{"name":"PALLET KBC CEMENT","onhand":493.0,"delcol":0},{"name":"DIRECT PALLET KBC CEMENT","onhand":0,"delcol":0},{"name":"PALLET LOWVELD LUMBER 1250X2150","onhand":2.0,"delcol":0},{"name":"PALLET LOWVELD LUMBER 820X2050","onhand":6.0,"delcol":0},{"name":"PALLET COVERLAND EMPTY","onhand":48.0,"delcol":10.0},{"name":"PALLET MARLEY ROOFING","onhand":18.0,"delcol":0},{"name":"PALLET SEPHAKU","onhand":59.0,"delcol":0},{"name":"SCREED SELF LEVELING KWIKSCREED 20KG","onhand":26.0,"delcol":0},{"name":"SCREED SELF LEVELING SCREED 20KG","onhand":14.0,"delcol":0},{"name":"TILE ADHESIVE BUILD IT 20KG","onhand":88.0,"delcol":0},{"name":"TILE ADHESIVE CERAM/PORC KWIKTILE 12HR 20KG","onhand":124.0,"delcol":0},{"name":"TILE ADHESIVE CERAMIC KWIKTILE 24HR 20KG","onhand":708.0,"delcol":0},{"name":"TILE ADHESIVE PORCELAIN KWIKTILE 18HR 20KG","onhand":124.0,"delcol":0},{"name":"TILE ADHESIVE PORCELAIN RAPID 12HR 20KG (WEBER)","onhand":111.0,"delcol":0},{"name":"TILE ADHESIVE PORCELAIN S 20KG 24 HOUR WEBER","onhand":0,"delcol":0},{"name":"TILE ADHESIVE PORCELAIN S BUILDIT 24HR 20KG","onhand":122.0,"delcol":0},{"name":"TILE ADHESIVE QUICK-SET 6 20KG","onhand":25.0,"delcol":0},{"name":"TILE GROUT DOVE GREY KWIKTILE 20KG","onhand":2.0,"delcol":0},{"name":"TILE GROUT LIGHT GREY KWIKTILE 20KG","onhand":1.0,"delcol":0},{"name":"TILE GROUT WHITE KWIKTILE 20KG","onhand":2.0,"delcol":0},{"name":"TIMBER   SABS BRAND 38X38X6.0M (BLUE)","onhand":1553.0,"delcol":41.0},{"name":"TIMBER   SABS BRAND 38X38X6.6M (RED)","onhand":1028.0,"delcol":12.0},{"name":"TIMBER   SABS PURLIN 50X76X6.0M (BLUE)","onhand":745.0,"delcol":5.0},{"name":"TIMBER   SABS PURLIN 50X76X6.6M (RED)","onhand":100.0,"delcol":22.0},{"name":"TIMBER   SABS RAFTER 38X114X6.0M (BLUE)","onhand":1118.0,"delcol":57.0},{"name":"TIMBER   SABS RAFTER 38X114X6.6M (RED)","onhand":-45.0,"delcol":45.0},{"name":"TIMBER   SABS RAFTER 38X152X6.0M (BLUE)","onhand":480.0,"delcol":0},{"name":"TIMBER   SABS RAFTER 38X152X6.6M (RED)","onhand":221.0,"delcol":57.0}];
+
+// ── FIREBASE CONFIG ──────────────────────────────────────
+// Stored in localStorage so all users on the same device share it.
+// The config is baked into the URL hash so sharing the link is enough.
+let fbApp = null, fbDb = null, fbRef = null;
+let fbConnected = false;
+let syncEnabled = false;
+let suppressRemoteUpdate = false;
+
+function getFbConfig() {
+  try { return JSON.parse(localStorage.getItem('rw_fb_config') || 'null'); } catch(e){ return null; }
+}
+function saveFbConfig(cfg) {
+  localStorage.setItem('rw_fb_config', JSON.stringify(cfg));
+}
+
+// ── STATE ────────────────────────────────────────────────
+let state = {};
+let filter = 'all';
+let dirty = 0;
+
+function initState(remoteData) {
+  ITEMS_RAW.forEach(item => {
+    const remote = remoteData && remoteData[safeKey(item.name)];
+    if (remote) {
+      state[item.name] = {
+        count:    remote.count  ?? '',
+        grv:      remote.grv    ?? '',
+        onhand:   item.onhand,
+        delcol:   item.delcol,
+        ltstcost: remote.ltstcost,
+        note:     remote.note   ?? ''
+      };
+    } else if (!state[item.name]) {
+      state[item.name] = { count: '', grv: '', onhand: item.onhand, delcol: item.delcol, note: '' };
+    } else {
+      state[item.name].onhand = item.onhand;
+      state[item.name].delcol = item.delcol;
+      if (state[item.name].grv === undefined) state[item.name].grv = '';
+    }
+  });
+}
+
+// Firebase keys can't have . # $ [ ] /
+function safeKey(name) {
+  return name.replace(/[.#$\[\]/]/g, '_');
+}
+
+// ── SYNC STATUS UI ───────────────────────────────────────
+function setSyncStatus(status, msg) {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  const colors = { connected:'#22c55e', syncing:'#f59e0b', offline:'#6b7888', error:'#ef4444' };
+  const col = colors[status] || '#6b7888';
+  el.innerHTML = `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0;"></span><span>${msg}</span>`;
+  el.style.color = col;
+}
+
+// ── FIREBASE INIT ─────────────────────────────────────────
+async function initFirebase(config) {
+  setSyncStatus('syncing', 'Connecting…');
+  try {
+    // Dynamically load Firebase SDK
+    await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js');
+
+    if (firebase.apps.length) firebase.apps.forEach(a => a.delete());
+    fbApp = firebase.initializeApp(config);
+    fbDb  = firebase.database();
+    fbRef = fbDb.ref('recon_wilhelm/state');
+
+    // Connection state
+    firebase.database().ref('.info/connected').on('value', snap => {
+      fbConnected = snap.val() === true;
+      setSyncStatus(fbConnected ? 'connected' : 'offline', fbConnected ? 'Live sync ON' : 'Offline');
+    });
+
+    // Load initial data then subscribe to live changes
+    const snap = await fbRef.once('value');
+    const remoteData = snap.val() || {};
+    initState(remoteData);
+    renderItems();
+    renderEntryTable();
+    updateStats();
+
+    // Live listener — applies remote changes to UI
+    fbRef.on('value', snap => {
+      if (suppressRemoteUpdate) return;
+      const remoteData = snap.val() || {};
+      let changed = false;
+      ITEMS_RAW.forEach(item => {
+        const rd = remoteData[safeKey(item.name)];
+        if (!rd) return;
+        const s = state[item.name];
+        if (rd.count !== s.count || rd.grv !== s.grv || rd.note !== s.note) {
+          s.count = rd.count ?? '';
+          s.grv   = rd.grv   ?? '';
+          s.note  = rd.note  ?? '';
+          changed = true;
+        }
+      });
+      if (changed) {
+        renderItems();
+        renderEntryTable();
+        updateStats();
+        flashSyncBadge();
+      }
+    });
+
+    syncEnabled = true;
+    saveFbConfig(config);
+    setSyncStatus('connected', 'Live sync ON');
+    document.getElementById('setupOverlay')?.remove();
+    return true;
+  } catch(err) {
+    console.error(err);
+    setSyncStatus('error', 'Connect failed');
+    return false;
+  }
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) return res();
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+function flashSyncBadge() {
+  const el = document.getElementById('syncStatus');
+  if (!el) return;
+  el.style.opacity = '0.4';
+  setTimeout(() => el.style.opacity = '1', 300);
+}
+
+// ── SAVE SESSION ─────────────────────────────────────────
+async function saveSession() {
+  const btn = document.getElementById('saveBtn');
+
+  if (syncEnabled && fbRef) {
+    setSyncStatus('syncing', 'Saving…');
+    suppressRemoteUpdate = true;
+    try {
+      const updates = {};
+      ITEMS_RAW.forEach(item => {
+        const s = state[item.name];
+        updates[safeKey(item.name)] = {
+          count: s.count ?? '',
+          grv:   s.grv   ?? '',
+          note:  s.note  ?? ''
+        };
+        // Only save ltstcost if it was manually set
+        if (s.ltstcost !== undefined) updates[safeKey(item.name)].ltstcost = s.ltstcost;
+      });
+      await fbRef.set(updates);
+      dirty = 0;
+      document.getElementById('dirtyCount').textContent = '0';
+      setSyncStatus('connected', 'Live sync ON');
+      btn.innerHTML = '✅ Saved! <span class="fab-count" id="dirtyCount">0</span>';
+    } catch(e) {
+      setSyncStatus('error', 'Save failed');
+      btn.innerHTML = '❌ Error <span class="fab-count" id="dirtyCount">' + dirty + '</span>';
+    }
+    setTimeout(() => suppressRemoteUpdate = false, 1000);
+  } else {
+    // Fallback: local save only
+    localStorage.setItem('recon_wilhelm_state', JSON.stringify(state));
+    dirty = 0;
+    document.getElementById('dirtyCount').textContent = '0';
+    btn.innerHTML = '💾 Saved (local) <span class="fab-count" id="dirtyCount">0</span>';
+  }
+
+  setTimeout(() => {
+    btn.innerHTML = '💾 Save <span class="fab-count" id="dirtyCount">' + dirty + '</span>';
+  }, 2000);
+}
+
+function markDirty() {
+  dirty++;
+  const el = document.getElementById('dirtyCount');
+  if (el) el.textContent = dirty;
+}
+
+// ── SETUP OVERLAY ─────────────────────────────────────────
+function showSetupOverlay() {
+  const overlay = document.createElement('div');
+  overlay.id = 'setupOverlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(13,15,19,0.97);z-index:9999;
+    display:flex;align-items:center;justify-content:center;padding:16px;
+  `;
+  overlay.innerHTML = `
+    <div style="background:#161b22;border:1px solid #2a3140;border-radius:16px;padding:28px 20px;max-width:460px;width:100%;">
+      <div style="font-size:22px;font-weight:800;letter-spacing:2px;color:#f59e0b;margin-bottom:4px;">RECON · WILHELM</div>
+      <div style="font-size:13px;color:#6b7888;margin-bottom:20px;">Live collaboration setup</div>
+
+      <div style="background:#1e242d;border-radius:10px;padding:14px;margin-bottom:18px;font-size:13px;color:#e2e8f0;line-height:1.7;">
+        <strong style="color:#f59e0b;">One-time setup</strong> — takes 2 minutes.<br>
+        After this, everyone shares the same live data.
+        <ol style="margin:10px 0 0 16px;color:#94a3b8;font-size:12px;line-height:2;">
+          <li>Go to <strong style="color:#e2e8f0;">console.firebase.google.com</strong></li>
+          <li>Create a free project (or use existing)</li>
+          <li>Click <strong style="color:#e2e8f0;">Build → Realtime Database → Create</strong></li>
+          <li>Set rules to <code style="background:#0d0f13;padding:1px 5px;border-radius:3px;">read/write: true</code></li>
+          <li>Go to <strong style="color:#e2e8f0;">Project Settings → Your apps → Web</strong></li>
+          <li>Copy the <code style="background:#0d0f13;padding:1px 5px;border-radius:3px;">firebaseConfig</code> object and paste below</li>
+        </ol>
+      </div>
+
+      <label style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#6b7888;font-weight:700;">Paste Firebase Config — any format works</label>
+      <textarea id="fbConfigInput" placeholder='apiKey: "AIzaSy...",
+authDomain: "your-app.firebaseapp.com",
+databaseURL: "https://your-app-default-rtdb.firebaseio.com",
+projectId: "your-app",
+storageBucket: "your-app.appspot.com",
+messagingSenderId: "123456789",
+appId: "1:123456789:web:abc123"'
+        style="width:100%;background:#0d0f13;border:1px solid #2a3140;border-radius:8px;padding:12px;color:#e2e8f0;font-family:monospace;font-size:12px;min-height:130px;margin:8px 0 12px;outline:none;resize:vertical;"></textarea>
+
+      <div id="fbSetupMsg" style="font-size:12px;margin-bottom:10px;min-height:18px;"></div>
+
+      <button onclick="tryConnectFirebase()" style="width:100%;background:#f59e0b;color:#000;border:none;border-radius:10px;height:52px;font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:1px;cursor:pointer;margin-bottom:10px;">
+        ⚡ CONNECT &amp; SYNC
+      </button>
+      <button onclick="skipSync()" style="width:100%;background:transparent;color:#6b7888;border:1px solid #2a3140;border-radius:10px;height:44px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+        Continue offline (local save only)
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+async function tryConnectFirebase() {
+  const raw = document.getElementById('fbConfigInput').value.trim();
+  const msgEl = document.getElementById('fbSetupMsg');
+  msgEl.style.color = '#f59e0b';
+  msgEl.textContent = 'Connecting…';
+
+  let config;
+  try {
+    config = parseFirebaseConfig(raw);
+  } catch(e) {
+    msgEl.style.color = '#ef4444';
+    msgEl.textContent = '⚠ Could not parse config: ' + e.message;
+    return;
+  }
+
+  if (!config.databaseURL) {
+    msgEl.style.color = '#ef4444';
+    msgEl.textContent = '⚠ Missing databaseURL — make sure you created a Realtime Database in Firebase';
+    return;
+  }
+
+  const ok = await initFirebase(config);
+  if (!ok) {
+    msgEl.style.color = '#ef4444';
+    msgEl.textContent = '⚠ Connection failed — check your database rules are set to allow read/write';
+  }
+}
+
+function parseFirebaseConfig(raw) {
+  // Extract all key: "value" pairs directly — no JSON.parse needed
+  const result = {};
+  const pattern = /(\w+)\s*:\s*["']([^"']+)["']/g;
+  let match;
+  while ((match = pattern.exec(raw)) !== null) {
+    result[match[1]] = match[2];
+  }
+  if (Object.keys(result).length === 0) throw new Error('No config fields found — paste the firebaseConfig block');
+  return result;
+}
+
+function skipSync() {
+  document.getElementById('setupOverlay')?.remove();
+  // Load from local storage as fallback
+  const saved = localStorage.getItem('recon_wilhelm_state');
+  if (saved) { try { const d = JSON.parse(saved); initState(d); } catch(e){} }
+  else initState(null);
+  renderItems();
+  renderEntryTable();
+  updateStats();
+  setSyncStatus('offline', 'Offline — local only');
+}
+
+function resetFirebaseConfig() {
+  if (!confirm('Disconnect from Firebase and re-run setup?')) return;
+  localStorage.removeItem('rw_fb_config');
+  location.reload();
+}
+
+
+// ── RECON LOGIC ──────────────────────────────────────────
+// RECON = (COUNT - GRV) - DELCOL - ONHAND
+function calcRecon(name) {
+  const s = state[name];
+  if (s.count === '' || s.count === null) return null;
+  const count = parseFloat(s.count) || 0;
+  const grv   = parseFloat(s.grv)   || 0;
+  return (count - grv) - s.delcol - s.onhand;
+}
+
+// ── RENDER ───────────────────────────────────────────────
+function getSection(name) {
+  const n = name.toLowerCase();
+  if (n.startsWith('cement') || n.startsWith('rhino')) return 'CEMENT';
+  if (n.startsWith('brick') || n.startsWith('brickforce') || n.startsWith('special brick')) return 'BRICKS & PAVING';
+  if (n.startsWith('pallet') || n.startsWith('direct pallet')) return 'PALLETS';
+  if (n.startsWith('tile')) return 'TILE ADHESIVE & GROUT';
+  if (n.startsWith('screed')) return 'SCREED';
+  if (n.startsWith('timber')) return 'TIMBER';
+  return 'OTHER';
+}
+
+function renderItems() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const list = document.getElementById('itemsList');
+  
+  let filtered = ITEMS_RAW.filter(item => {
+    if (search && !item.name.toLowerCase().includes(search)) return false;
+    const recon = calcRecon(item.name);
+    if (filter === 'short' && (recon === null || recon >= 0)) return false;
+    if (filter === 'over'  && (recon === null || recon <= 0)) return false;
+    if (filter === 'pending' && recon !== null) return false;
+    return true;
+  });
+
+  // Group by section
+  let sections = {};
+  filtered.forEach(item => {
+    const sec = getSection(item.name);
+    if (!sections[sec]) sections[sec] = [];
+    sections[sec].push(item);
+  });
+
+  let html = '';
+  Object.entries(sections).forEach(([sec, items]) => {
+    html += `<div class="section-divider">${sec}</div>`;
+    items.forEach(item => {
+      html += buildCard(item);
+    });
+  });
+
+  list.innerHTML = html || '<div style="text-align:center;color:var(--muted);padding:40px;font-size:14px;">No items match your filter.</div>';
+  updateStats();
+  updateSummary();
+}
+
+function buildCard(item) {
+  const s = state[item.name];
+  const recon = calcRecon(item.name);
+  const iq = IQ_LOOKUP[item.name] || {};
+  const cost = s.ltstcost !== undefined ? s.ltstcost : (iq.ltstcost || 0);
+  const randVal = (recon !== null && cost > 0) ? recon * cost : null;
+
+  let cardClass = 'item-card';
+  let statusHtml = '';
+  let diffClass = 'zero';
+  let diffText = '—';
+
+  if (recon === null) {
+    cardClass += ' is-zero';
+    statusHtml = `<span class="status-badge pending">PENDING</span>`;
+  } else if (recon < 0) {
+    cardClass += ' is-short';
+    statusHtml = `<span class="status-badge">SHORT ${fmt(recon)}</span>`;
+    diffClass = 'short';
+    diffText = fmt(recon);
+  } else if (recon > 0) {
+    cardClass += ' is-over';
+    statusHtml = `<span class="status-badge">OVER +${fmt(recon)}</span>`;
+    diffClass = 'over';
+    diffText = '+' + fmt(recon);
+  } else {
+    statusHtml = `<span class="status-badge" style="background:rgba(34,197,94,.1);color:#22c55e;border:1px solid rgba(34,197,94,.3)">✓ MATCH</span>`;
+    diffText = '0';
+  }
+
+  // Rand value display
+  let randHtml = '';
+  if (randVal !== null) {
+    const randColor = randVal < 0 ? 'var(--short)' : randVal > 0 ? 'var(--over)' : 'var(--muted)';
+    const randBg   = randVal < 0 ? 'rgba(239,68,68,0.1)' : randVal > 0 ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.04)';
+    const randBdr  = randVal < 0 ? 'rgba(239,68,68,0.3)'  : randVal > 0 ? 'rgba(34,197,94,0.25)'  : 'var(--border)';
+    const sign = randVal > 0 ? '+' : '';
+    randHtml = `<div style="background:${randBg};border:1px solid ${randBdr};border-radius:7px;padding:7px 12px;display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+      <span style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:${randColor};font-weight:700;">💰 Rand Value</span>
+      <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:${randColor};">${sign}R ${Math.abs(randVal).toLocaleString('en-ZA', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+    </div>`;
+  }
+
+  const onhandClass = s.onhand < 0 ? 'neg' : '';
+  const esc = item.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+  return `
+<div class="${cardClass}" id="card-${CSS.escape(item.name)}">
+  <div class="card-header" onclick="toggleCard('${esc}')">
+    <div class="item-name">${item.name}</div>
+    ${statusHtml}
+  </div>
+  <div class="card-meta">
+    <div class="meta-item">
+      <span class="lbl">On Hand</span>
+      <span class="val ${onhandClass}">${fmt(s.onhand)}</span>
+    </div>
+    <div class="meta-item">
+      <span class="lbl">Del Col</span>
+      <span class="val">${fmt(s.delcol)}</span>
+    </div>
+    <div class="meta-item">
+      <span class="lbl">Count</span>
+      <span class="val">${s.count !== '' ? fmt(s.count) : '—'}</span>
+    </div>
+    <div class="meta-item">
+      <span class="lbl">Ltst Cost</span>
+      <span class="val" style="color:var(--muted);">R ${cost > 0 ? cost.toLocaleString('en-ZA', {minimumFractionDigits:2,maximumFractionDigits:4}) : '—'}</span>
+    </div>
+  </div>
+  ${recon !== null ? `<div class="recon-diff"><div class="diff-label">Recon (Count − Del Col − On Hand)</div><div class="diff-value ${diffClass}">${diffText}</div></div>` : ''}
+  ${randHtml}
+  <div class="card-inputs" id="inputs-${esc}" style="display:none">
+    <div class="input-group">
+      <label>Count Qty</label>
+      <input type="number" id="count-${esc}" value="${s.count}" placeholder="0" oninput="updateCount('${esc}', this.value)" inputmode="numeric">
+    </div>
+    <div class="input-group">
+      <label>On Hand</label>
+      <input type="number" id="oh-${esc}" value="${s.onhand}" placeholder="${s.onhand}" oninput="updateOnHand('${esc}', this.value)" inputmode="numeric">
+    </div>
+    <div class="input-group">
+      <label>Del Col</label>
+      <input type="number" id="dc-${esc}" value="${s.delcol}" placeholder="0" oninput="updateDelCol('${esc}', this.value)" inputmode="numeric">
+    </div>
+    <div class="input-group">
+      <label>Ltst Cost (R)</label>
+      <input type="number" id="lc-${esc}" value="${cost || ''}" placeholder="0.00" oninput="updateCost('${esc}', this.value)" inputmode="decimal">
+    </div>
+    <div class="input-group" style="display:flex;flex-direction:column;gap:5px;">
+      <label>Note</label>
+      <input type="text" id="note-${esc}" value="${s.note || ''}" placeholder="Optional note…" oninput="updateNote('${esc}', this.value)" style="font-family:'Barlow Condensed',sans-serif;font-size:14px;">
+    </div>
+  </div>
+</div>`;
+}
+
+function toggleCard(name) {
+  const inp = document.getElementById('inputs-' + CSS.escape(name));
+  if (!inp) return;
+  const open = inp.style.display !== 'none';
+  inp.style.display = open ? 'none' : 'grid';
+  if (!open) {
+    const countEl = document.getElementById('count-' + CSS.escape(name));
+    if (countEl) setTimeout(() => countEl.focus(), 50);
+  }
+}
+
+function fmt(n) {
+  if (n === null || n === '') return '—';
+  const num = parseFloat(n);
+  if (isNaN(num)) return n;
+  return num.toLocaleString('en-ZA');
+}
+
+function updateCount(name, val) {
+  state[name].count = val === '' ? '' : val;
+  markDirty();
+  debounce(() => renderItems(), 300)();
+}
+function updateOnHand(name, val) {
+  state[name].onhand = val === '' ? 0 : parseFloat(val) || 0;
+  markDirty();
+  debounce(() => renderItems(), 300)();
+}
+function updateDelCol(name, val) {
+  state[name].delcol = val === '' ? 0 : parseFloat(val) || 0;
+  markDirty();
+  debounce(() => renderItems(), 300)();
+}
+function updateCost(name, val) {
+  state[name].ltstcost = val === '' ? undefined : parseFloat(val) || 0;
+  markDirty();
+  debounce(() => renderItems(), 300)();
+}
+function updateNote(name, val) {
+  state[name].note = val;
+  markDirty();
+}
+
+// ── DEBOUNCE ─────────────────────────────────────────────
+const debounceTimers = {};
+function debounce(fn, ms) {
+  const key = fn.toString().slice(0, 30);
+  return function() {
+    clearTimeout(debounceTimers[key]);
+    debounceTimers[key] = setTimeout(fn, ms);
+  };
+}
+
+// ── STATS ────────────────────────────────────────────────
+function updateStats() {
+  let shorts = 0, overs = 0, counted = 0;
+  let totalLoss = 0, totalGain = 0;
+  ITEMS_RAW.forEach(item => {
+    const r = calcRecon(item.name);
+    const s = state[item.name];
+    const iq = IQ_LOOKUP[item.name] || {};
+    const cost = s.ltstcost !== undefined ? s.ltstcost : (iq.ltstcost || 0);
+    if (r !== null) {
+      counted++;
+      if (r < 0) { shorts++; totalLoss += r * cost; }
+      else if (r > 0) { overs++; totalGain += r * cost; }
+    }
+  });
+  document.getElementById('stat-shorts').textContent = shorts;
+  document.getElementById('stat-overs').textContent = overs;
+  document.getElementById('stat-counted').textContent = counted;
+  document.getElementById('sum-shorts').textContent = shorts;
+  document.getElementById('sum-overs').textContent = overs;
+  document.getElementById('sum-matched').textContent = counted - shorts - overs;
+  const pct = Math.round(counted / ITEMS_RAW.length * 100);
+  document.getElementById('progressBar').style.width = pct + '%';
+  document.getElementById('progressText').textContent = `${counted} / ${ITEMS_RAW.length} items counted`;
+  // Rand totals
+  const fmtRand = v => 'R ' + Math.abs(v).toLocaleString('en-ZA', {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('stat-loss').textContent = fmtRand(totalLoss);
+  document.getElementById('stat-gain').textContent = fmtRand(totalGain);
+}
+
+// ── SUMMARY ──────────────────────────────────────────────
+function updateSummary() {
+  const body = document.getElementById('summaryBody');
+  const rows = ITEMS_RAW
+    .filter(i => calcRecon(i.name) !== null)
+    .sort((a, b) => {
+      const ra = calcRecon(a.name), rb = calcRecon(b.name);
+      return ra - rb; // shorts first
+    });
+
+  let html = '';
+  rows.forEach(item => {
+    const r = calcRecon(item.name);
+    const s = state[item.name];
+    const iq = IQ_LOOKUP[item.name] || {};
+    const cost = s.ltstcost !== undefined ? s.ltstcost : (iq.ltstcost || 0);
+    const randVal = cost > 0 ? r * cost : null;
+    const cls = r < 0 ? 'short-row' : r > 0 ? 'over-row' : '';
+    const sign = r > 0 ? '+' : '';
+    const randStr = randVal !== null
+      ? (randVal >= 0 ? '+' : '') + 'R ' + Math.abs(randVal).toLocaleString('en-ZA', {minimumFractionDigits:2,maximumFractionDigits:2})
+      : '—';
+    html += `<tr class="${cls}">
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;">${item.name}</td>
+      <td>${fmt(s.count)}</td>
+      <td>${fmt(s.onhand)}</td>
+      <td>${sign}${fmt(r)}</td>
+      <td class="col-cost" style="font-family:'DM Mono',monospace;font-size:12px;">R ${cost > 0 ? cost.toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td>
+      <td class="col-rand" style="font-family:'DM Mono',monospace;font-size:12px;font-weight:700;">${randVal !== null ? (randVal < 0 ? '' : '+') + 'R ' + Math.abs(randVal).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</td>
+    </tr>`;
+  });
+  body.innerHTML = html || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">No items counted yet</td></tr>';
+}
+
+// ── FILTER ───────────────────────────────────────────────
+function setFilter(f, btn) {
+  filter = f;
+  document.querySelectorAll('#page-count .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderItems();
+}
+
+// ── PAGE SWITCH ──────────────────────────────────────────
+function switchPage(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  (el || event.target.closest('.tab')).classList.add('active');
+  if (page === 'summary') updateSummary();
+  if (page === 'import') renderEntryTable();
+}
+
+// ── QUICK ENTRY TABLE ────────────────────────────────────
+function renderEntryTable() {
+  const search = (document.getElementById('entrySearch')?.value || '').toLowerCase();
+  const body = document.getElementById('entryTableBody');
+  if (!body) return;
+
+  const filtered = ITEMS_RAW.filter(item => !search || item.name.toLowerCase().includes(search));
+  let html = '';
+  let lastSec = '';
+
+  filtered.forEach((item, i) => {
+    const sec = getSection(item.name);
+    if (sec !== lastSec) {
+      lastSec = sec;
+      html += `<div style="background:var(--surface2);padding:8px 14px;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:700;border-bottom:1px solid var(--border);border-top:2px solid var(--border);">${sec}</div>`;
+    }
+
+    const s = state[item.name];
+    const r = calcRecon(item.name);
+    const iq = IQ_LOOKUP[item.name] || {};
+    const itemCode = iq.code || '';
+
+    let cardBorder = 'var(--border)';
+    let cardBg = 'transparent';
+    let reconDisplay = '—';
+    let reconColor = 'var(--muted)';
+    let reconBg = 'var(--surface2)';
+    let statusTag = '';
+
+    if (r !== null) {
+      if (r < 0) {
+        cardBorder = 'rgba(239,68,68,0.4)';
+        cardBg = 'rgba(239,68,68,0.05)';
+        reconDisplay = fmt(r);
+        reconColor = 'var(--short)';
+        reconBg = 'rgba(239,68,68,0.12)';
+        statusTag = `<span style="background:rgba(239,68,68,0.15);color:var(--short);border:1px solid rgba(239,68,68,0.35);border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.5px;">SHORT</span>`;
+      } else if (r > 0) {
+        cardBorder = 'rgba(34,197,94,0.35)';
+        cardBg = 'rgba(34,197,94,0.04)';
+        reconDisplay = '+' + fmt(r);
+        reconColor = 'var(--over)';
+        reconBg = 'rgba(34,197,94,0.12)';
+        statusTag = `<span style="background:rgba(34,197,94,0.12);color:var(--over);border:1px solid rgba(34,197,94,0.3);border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.5px;">OVER</span>`;
+      } else {
+        reconDisplay = '✓ MATCH';
+        reconColor = 'var(--over)';
+        reconBg = 'rgba(34,197,94,0.08)';
+        statusTag = `<span style="background:rgba(34,197,94,0.08);color:var(--over);border:1px solid rgba(34,197,94,0.2);border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.5px;">MATCH</span>`;
+      }
+    }
+
+    const esc = item.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+
+    html += `
+    <div id="etrow-${i}" style="border-bottom:1px solid var(--border);border-left:3px solid ${cardBorder};background:${cardBg};padding:10px 14px 10px 12px;">
+
+      <!-- Description full-width on top -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;">
+        <div>
+          <div style="font-size:14px;font-weight:700;line-height:1.35;color:var(--text);">${item.name}</div>
+          ${itemCode ? `<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-top:2px;">${itemCode}</div>` : ''}
+        </div>
+        <div style="flex-shrink:0;margin-top:2px;">${statusTag || `<span style="background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:12px;padding:2px 8px;font-size:10px;letter-spacing:.5px;">PENDING</span>`}</div>
+      </div>
+
+      <!-- Data row: On Hand · Del Col · COUNT · GRV · Recon -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:8px;align-items:end;">
+
+        <!-- On Hand -->
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:700;">On Hand</span>
+          <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:${s.onhand<0?'var(--short)':'var(--text)'};">${fmt(s.onhand)}</span>
+        </div>
+
+        <!-- Del Col -->
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:700;">Del Col</span>
+          <span style="font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:var(--muted);">${fmt(s.delcol)}</span>
+        </div>
+
+        <!-- Count Qty — big tap target -->
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--accent);font-weight:700;">Count Qty</span>
+          <input type="number" id="et-count-${i}"
+            value="${s.count}" inputmode="numeric" placeholder="0"
+            oninput="entryTableUpdate('${esc}',this.value,${i})"
+            onfocus="this.select()"
+            style="width:100%;background:var(--bg);border:2px solid ${s.count!==''?'var(--accent)':'var(--border)'};border-radius:8px;padding:0 6px;height:44px;color:var(--accent);font-family:'DM Mono',monospace;font-size:18px;font-weight:700;text-align:center;outline:none;-moz-appearance:textfield;-webkit-appearance:none;">
+        </div>
+
+        <!-- GRV — subtracted from count -->
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#818cf8;font-weight:700;">GRV</span>
+          <input type="number" id="et-grv-${i}"
+            value="${s.grv}" inputmode="numeric" placeholder="0"
+            oninput="entryGRVUpdate('${esc}',this.value,${i})"
+            onfocus="this.select()"
+            style="width:100%;background:var(--bg);border:2px solid ${s.grv!==''&&s.grv!=='0'?'#818cf8':'var(--border)'};border-radius:8px;padding:0 6px;height:44px;color:#818cf8;font-family:'DM Mono',monospace;font-size:18px;font-weight:700;text-align:center;outline:none;-moz-appearance:textfield;-webkit-appearance:none;">
+        </div>
+
+        <!-- Recon result -->
+        <div style="display:flex;flex-direction:column;gap:3px;">
+          <span style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:700;">Recon</span>
+          <div id="et-recon-${i}" style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:${reconColor};background:${reconBg};border-radius:6px;padding:4px 6px;text-align:center;min-height:32px;display:flex;align-items:center;justify-content:center;">${reconDisplay}</div>
+        </div>
+
+      </div>
+    </div>`;
+  });
+
+  body.innerHTML = html || '<div style="padding:32px;text-align:center;color:var(--muted);">No items found.</div>';
+}
+
+function entryTableUpdate(name, val, rowIdx) {
+  state[name].count = val === '' ? '' : val;
+  markDirty();
+  refreshReconCell(name, rowIdx);
+  const inp = document.getElementById('et-count-' + rowIdx);
+  if (inp) inp.style.borderColor = val !== '' ? 'var(--accent)' : 'var(--border)';
+  updateStats();
+}
+
+function entryGRVUpdate(name, val, rowIdx) {
+  state[name].grv = val === '' ? '' : val;
+  markDirty();
+  refreshReconCell(name, rowIdx);
+  const inp = document.getElementById('et-grv-' + rowIdx);
+  if (inp) inp.style.borderColor = (val !== '' && val !== '0') ? '#818cf8' : 'var(--border)';
+  updateStats();
+}
+
+function refreshReconCell(name, rowIdx) {
+  const r    = calcRecon(name);
+  const cell = document.getElementById('et-recon-' + rowIdx);
+  const row  = document.getElementById('etrow-' + rowIdx);
+  if (!cell) return;
+  if (r === null) {
+    cell.textContent = '—';           cell.style.color = 'var(--muted)';  cell.style.background = 'var(--surface2)';
+    if (row) { row.style.borderLeftColor = 'var(--border)';               row.style.background = 'transparent'; }
+  } else if (r < 0) {
+    cell.textContent = fmt(r);        cell.style.color = 'var(--short)';  cell.style.background = 'rgba(239,68,68,0.12)';
+    if (row) { row.style.borderLeftColor = 'rgba(239,68,68,0.4)';         row.style.background = 'rgba(239,68,68,0.05)'; }
+  } else if (r > 0) {
+    cell.textContent = '+' + fmt(r);  cell.style.color = 'var(--over)';   cell.style.background = 'rgba(34,197,94,0.12)';
+    if (row) { row.style.borderLeftColor = 'rgba(34,197,94,0.35)';        row.style.background = 'rgba(34,197,94,0.04)'; }
+  } else {
+    cell.textContent = '✓ MATCH';     cell.style.color = 'var(--over)';   cell.style.background = 'rgba(34,197,94,0.08)';
+    if (row) { row.style.borderLeftColor = 'rgba(34,197,94,0.35)';        row.style.background = 'rgba(34,197,94,0.04)'; }
+  }
+}
+
+// ── SMART IMPORT — full IQ Report paste ─────────────────
+// Full lookup table: all IQ rows keyed by description AND code
+const IQ_LOOKUP = {"PALLET COVERLAND EMPTY":{"code":"01","ltstcost":150.0,"onhand":48.0,"delcol":10.0},"CEMENT BUILD IT 32.5R":{"code":"011.10","ltstcost":68.81,"onhand":145.0,"delcol":34.0},"CEMENT SEPHAKU 42.5N 50KG":{"code":"011.11","ltstcost":93.15,"onhand":100.0,"delcol":40.0},"CEMENT SEPROAD 32.5N 50KG":{"code":"011.111","ltstcost":80.33,"onhand":0,"delcol":0},"CEMENT DAMAGED KBC 42.5 50KG":{"code":"011.114","ltstcost":87.5,"onhand":-8.0,"delcol":0},"CEMENT SEPHAKU 32.5N 50KG":{"code":"011.13","ltstcost":75.81,"onhand":-40.0,"delcol":120.0},"CEMENT SURECEM 32.5N 50KG":{"code":"011.14","ltstcost":78.66,"onhand":177.0,"delcol":70.0},"CEMENT DAMAGED KBC 32.5 50KG DAMAGED CEMENT":{"code":"011.17","ltstcost":75.0,"onhand":-12.0,"delcol":10.0},"CEMENT KBC 32.5N 50KG":{"code":"011.18","ltstcost":72.5,"onhand":9889.0,"delcol":314.0},"CEMENT KBC 42.5N 50KG":{"code":"011.19","ltstcost":82.0,"onhand":-242.0,"delcol":205.0},"BRICK STOCK KILN PER EACH":{"code":"022.3104","ltstcost":2.24,"onhand":7134.0,"delcol":0},"BRICK BASE KLINKER P/ EACH":{"code":"022.311","ltstcost":1.78,"onhand":3248.0,"delcol":0},"BRICK STOCK PLASTER BRICK P/EACH":{"code":"022.3118","ltstcost":1.5,"onhand":3369.0,"delcol":0},"BRICK PAVING BEVEL GREY SPLIT P/EACH":{"code":"022.3131","ltstcost":2.15,"onhand":5300.0,"delcol":0},"SPECIAL BRICK STOCK CLAY APOLLO KYA P/EACH":{"code":"022.3186","ltstcost":1.58,"onhand":0,"delcol":0},"BRICK STOCK CEMENT 14 MPA PER EACH HYPERBUILD":{"code":"022.32","ltstcost":1.66,"onhand":-24930.0,"delcol":7758.0},"BRICK STOCK CEMENT 14MPA P/EACH":{"code":"022.328","ltstcost":1.6152,"onhand":21405.0,"delcol":0},"BRICK SEMI FACE IVORY TRAVERTINE P/EACH":{"code":"022.339","ltstcost":3.73,"onhand":4931.0,"delcol":0},"BRICK SEMI FACE RAINBOW P/EACH":{"code":"022.346","ltstcost":3.113,"onhand":330.0,"delcol":0},"BRICK PAVING BEVEL GREY PREMIUM 50MM EACH":{"code":"022.348","ltstcost":1.99,"onhand":4160.0,"delcol":0},"BRICK PAVING BEVEL BLACK 50MM EACH":{"code":"022.367","ltstcost":2.12,"onhand":10160.0,"delcol":3542.0},"BRICK SEMI FACE IROKO P/EACH":{"code":"022.379","ltstcost":2.8,"onhand":2500.0,"delcol":0},"BRICK PAVING BEVEL GREY 50MM (COARS/ROUGH)":{"code":"022.388","ltstcost":1.89,"onhand":4472.0,"delcol":0},"BRICK SEMI FACE VERONA SATIN P/EACH":{"code":"022.394","ltstcost":2.83,"onhand":505.0,"delcol":0},"BRICK STOCK CEMENT 10MPA PER EACH":{"code":"022.397","ltstcost":1.565,"onhand":53976.0,"delcol":2000.0},"BRICK PAVING BEVEL RED 50MM EACH":{"code":"07020","ltstcost":2.13,"onhand":20135.0,"delcol":0},"BRICK PAVING I/LOCK GREY 60MM EACH":{"code":"07022","ltstcost":2.34,"onhand":14175.0,"delcol":290.0},"PALLET BPB GYPSUM":{"code":"100000040","ltstcost":138.53,"onhand":7.0,"delcol":0},"TILE ADHESIVE BUILD IT 20KG":{"code":"101","ltstcost":31.8399,"onhand":88.0,"delcol":0},"TILE ADHESIVE PORCELAIN S BUILDIT 24HR 20KG":{"code":"1011001","ltstcost":61.96,"onhand":122.0,"delcol":0},"CEMENT PPC 42.5N 50KG":{"code":"105","ltstcost":97.3387,"onhand":158.0,"delcol":682.0},"BRICK STOCK CLAY HALF PER/PALLET":{"code":"1055","ltstcost":662.05,"onhand":-9.25,"delcol":2.0},"CEMENT 5KG BAGS":{"code":"11011","ltstcost":6.5657,"onhand":897.0,"delcol":0},"PALLET PPC":{"code":"119","ltstcost":311.2515,"onhand":70.0,"delcol":0},"BRICK BLOCK YARD PER/EACH":{"code":"1224","ltstcost":7.56,"onhand":1406.0,"delcol":1109.0},"BRICK STOCK CLAY PER EACH YARD":{"code":"12251","ltstcost":1.815,"onhand":-56305.0,"delcol":73500.0},"BRICK STOCK SEMI FACE PREMIUM CLAY P/EACH":{"code":"12252","ltstcost":1.815,"onhand":26312.0,"delcol":15000.0},"BRICK STOCK CEMENT PER EACH YARD":{"code":"126","ltstcost":1.49,"onhand":-1052.0078,"delcol":16750.0},"BRICK MAXI YARD PER/EACH":{"code":"127","ltstcost":3.06,"onhand":15415.0,"delcol":6155.0},"SCREED SELF LEVELING SCREED 20KG":{"code":"140002","ltstcost":173.77,"onhand":14.0,"delcol":0},"TILE ADHESIVE PORCELAIN S 20KG 24 HOUR WEBER":{"code":"1414.40","ltstcost":61.96,"onhand":0,"delcol":0},"TILE ADHESIVE QUICK-SET 6 20KG":{"code":"1414.421","ltstcost":110.0695,"onhand":25.0,"delcol":0},"TILE ADHESIVE CERAMIC KWIKTILE 24HR 20KG":{"code":"1414.436","ltstcost":25.66,"onhand":708.0,"delcol":0},"TILE ADHESIVE PORCELAIN KWIKTILE 18HR 20KG":{"code":"1414.444","ltstcost":52.2126,"onhand":124.0,"delcol":0},"SCREED SELF LEVELING KWIKSCREED 20KG":{"code":"1414.448","ltstcost":152.7867,"onhand":26.0,"delcol":0},"TILE ADHESIVE PORCELAIN RAPID 12HR 20KG (WEBER)":{"code":"1414.449","ltstcost":74.99,"onhand":111.0,"delcol":0},"TILE ADHESIVE CERAM/PORC KWIKTILE 12HR 20KG":{"code":"1414.459","ltstcost":76.0371,"onhand":124.0,"delcol":0},"TILE GROUT WHITE KWIKTILE 20KG":{"code":"1414.468","ltstcost":144.8459,"onhand":2.0,"delcol":0},"TILE GROUT LIGHT GREY KWIKTILE 20KG":{"code":"1414.469","ltstcost":141.73,"onhand":1.0,"delcol":0},"TILE GROUT DOVE GREY KWIKTILE 20KG":{"code":"1414.470","ltstcost":144.8459,"onhand":2.0,"delcol":0},"PALLET EVERITE":{"code":"200001","ltstcost":450.0,"onhand":14.0,"delcol":0},"BRICKFORCE SABS 75X2.80MM":{"code":"20007","ltstcost":35.0,"onhand":-40.0,"delcol":18.0},"BRICKFORCE SABS 150X2.80MM":{"code":"20008","ltstcost":35.0,"onhand":591.0,"delcol":166.0},"BRICKFORCE SABS 230X2.80MM":{"code":"20009","ltstcost":40.81,"onhand":134.0,"delcol":5.0},"RHINO LITE 40 KG":{"code":"2331","ltstcost":298.6256,"onhand":587.0,"delcol":1.0},"PALLET AVENG INFRASET (REFUNDABLE)":{"code":"3030.10","ltstcost":130.0,"onhand":62.0,"delcol":0},"PALLET SEPHAKU":{"code":"3030.11","ltstcost":230.0,"onhand":59.0,"delcol":0},"PALLET MARLEY ROOFING":{"code":"3030.111","ltstcost":140.0,"onhand":18.0,"delcol":0},"DIRECT PALLET KBC CEMENT":{"code":"3030.12","ltstcost":195.0,"onhand":0,"delcol":0},"PALLET LOWVELD LUMBER 820X2050":{"code":"3030.16","ltstcost":164.3,"onhand":6.0,"delcol":0},"PALLET LOWVELD LUMBER 1250X2150":{"code":"3030.17","ltstcost":289.39,"onhand":2.0,"delcol":0},"PALLET KBC CEMENT":{"code":"3030.18","ltstcost":195.0,"onhand":493.0,"delcol":0},"TIMBER   SABS BRAND 38X38X6.0M (BLUE)":{"code":"40903","ltstcost":50.6615,"onhand":1553.0,"delcol":41.0},"TIMBER   SABS BRAND 38X38X6.6M (RED)":{"code":"40904","ltstcost":52.1278,"onhand":1028.0,"delcol":12.0},"TIMBER   SABS RAFTER 38X114X6.0M (BLUE)":{"code":"40907","ltstcost":126.55,"onhand":1118.0,"delcol":57.0},"TIMBER   SABS RAFTER 38X114X6.6M (RED)":{"code":"40908","ltstcost":137.2361,"onhand":-45.0,"delcol":45.0},"TIMBER   SABS RAFTER 38X152X6.0M (BLUE)":{"code":"40909","ltstcost":172.6017,"onhand":480.0,"delcol":0},"TIMBER   SABS PURLIN 50X76X6.0M (BLUE)":{"code":"40914","ltstcost":124.7136,"onhand":745.0,"delcol":5.0},"TIMBER   SABS PURLIN 50X76X6.6M (RED)":{"code":"40920","ltstcost":137.25,"onhand":100.0,"delcol":22.0},"TIMBER   SABS RAFTER 38X152X6.6M (RED)":{"code":"9020","ltstcost":186.7993,"onhand":221.0,"delcol":57.0}};
+
+// Build code-to-name reverse lookup
+const CODE_TO_NAME = {};
+Object.entries(IQ_LOOKUP).forEach(([name, data]) => { CODE_TO_NAME[data.code] = name; });
+
+function parseRawPaste(text) {
+  // Split into rows
+  const lines = text.split('\n').map(l => l.trimEnd()).filter(l => l.trim().length > 0);
+  // Split each line into tab-separated cols
+  return lines.map(l => l.split('\t').map(c => c.trim()));
+}
+
+function detectColumns(rows) {
+  // Find header row — look for DESCRIPT/CODE/LTSTCOST/ONHAND/DELCOL keywords
+  const keywords = { desc:['descript','description','desc'], code:['code'], cost:['ltstcost','cost','ltst cost'], onhand:['onhand','on hand','on-hand'], delcol:['delcol','del col','del-col'] };
+  let colMap = null;
+
+  for (let ri = 0; ri < Math.min(5, rows.length); ri++) {
+    const row = rows[ri].map(c => c.toLowerCase());
+    const map = {};
+    row.forEach((cell, ci) => {
+      Object.entries(keywords).forEach(([key, terms]) => {
+        if (terms.some(t => cell.includes(t))) map[key] = ci;
+      });
+    });
+    if (map.desc !== undefined || map.onhand !== undefined) { colMap = map; colMap._headerRow = ri; break; }
+  }
+
+  // Fallback: assume first 5 cols = DESCRIPT, CODE, LTSTCOST, ONHAND, DELCOL
+  if (!colMap) colMap = { desc:0, code:1, cost:2, onhand:3, delcol:4, _headerRow:-1 };
+  return colMap;
+}
+
+function smartExtract(rows, colMap) {
+  const startRow = colMap._headerRow + 1;
+  const results = []; // {name, code, onhand, delcol, ltstcost, matchedBy}
+
+  for (let ri = startRow; ri < rows.length; ri++) {
+    const row = rows[ri];
+    if (!row || row.length === 0) continue;
+
+    const descRaw = colMap.desc !== undefined ? (row[colMap.desc] || '') : '';
+    const codeRaw = colMap.code !== undefined ? (row[colMap.code] || '') : '';
+    const onhandRaw = colMap.onhand !== undefined ? row[colMap.onhand] : '';
+    const delcolRaw = colMap.delcol !== undefined ? row[colMap.delcol] : '';
+    const costRaw   = colMap.cost   !== undefined ? row[colMap.cost]   : '';
+
+    const desc = descRaw.trim();
+    const code = codeRaw.trim();
+    const onhand = parseNum(onhandRaw);
+    const delcol = parseNum(delcolRaw);
+    const cost   = parseNum(costRaw);
+
+    if (!desc && !code) continue;
+
+    // Try to find a match in our ITEMS_RAW list
+    let matchedName = null;
+    let matchedBy = null;
+
+    // 1) Exact description match
+    if (desc && state[desc] !== undefined) { matchedName = desc; matchedBy = 'desc'; }
+    // 2) Code match
+    if (!matchedName && code && CODE_TO_NAME[code] && state[CODE_TO_NAME[code]] !== undefined) {
+      matchedName = CODE_TO_NAME[code]; matchedBy = 'code';
+    }
+    // 3) Fuzzy desc — normalise spaces
+    if (!matchedName && desc) {
+      const norm = desc.replace(/\s+/g,' ').toUpperCase();
+      const found = Object.keys(state).find(k => k.replace(/\s+/g,' ').toUpperCase() === norm);
+      if (found) { matchedName = found; matchedBy = 'fuzzy'; }
+    }
+
+    if (matchedName) {
+      results.push({ name: matchedName, code, onhand, delcol, ltstcost: cost, matchedBy });
+    }
+  }
+  return results;
+}
+
+function parseNum(val) {
+  if (val === null || val === undefined || val === '') return null;
+  const n = parseFloat(String(val).replace(/,/g,'').replace(/\s/g,''));
+  return isNaN(n) ? null : n;
+}
+
+function previewImport() {
+  const text = document.getElementById('pasteArea').value.trim();
+  const preview = document.getElementById('importPreview');
+  const body = document.getElementById('importPreviewBody');
+  if (!text) { body.innerHTML = '<span style="color:var(--short)">Nothing pasted yet.</span>'; preview.style.display='block'; return; }
+
+  const rows = parseRawPaste(text);
+  const colMap = detectColumns(rows);
+  const results = smartExtract(rows, colMap);
+
+  if (!results.length) {
+    body.innerHTML = '<span style="color:var(--short)">⚠️ No matching items found. Check that your paste includes Description or Code columns.</span>';
+    preview.style.display='block'; return;
+  }
+
+  // Column detection summary
+  const colNames = Object.entries(colMap).filter(([k])=>k!=='_headerRow').map(([k,v])=>`<span style="background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;font-family:'DM Mono',monospace;font-size:11px;">${k.toUpperCase()}→col${v+1}</span>`).join(' ');
+  let html = `<div style="margin-bottom:8px;display:flex;gap:4px;flex-wrap:wrap;">${colNames}</div>`;
+  html += `<div style="color:var(--over);font-size:13px;margin-bottom:10px;font-weight:700;">✅ ${results.length} items matched — ready to apply</div>`;
+
+  html += `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="border-bottom:1px solid var(--border);">
+      <th style="padding:5px 8px;text-align:left;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase;">Description</th>
+      <th style="padding:5px 8px;text-align:right;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase;">On Hand</th>
+      <th style="padding:5px 8px;text-align:right;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase;">Del Col</th>
+      <th style="padding:5px 8px;text-align:right;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase;">Ltst Cost</th>
+      <th style="padding:5px 8px;text-align:center;color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase;">By</th>
+    </tr></thead><tbody>`;
+
+  results.slice(0, 20).forEach(r => {
+    const byColor = r.matchedBy === 'code' ? 'var(--accent)' : r.matchedBy === 'fuzzy' ? '#a78bfa' : 'var(--over)';
+    html += `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:5px 8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.name}</td>
+      <td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;color:${r.onhand<0?'var(--short)':'var(--text)'};">${r.onhand??'—'}</td>
+      <td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;">${r.delcol??'—'}</td>
+      <td style="padding:5px 8px;text-align:right;font-family:'DM Mono',monospace;">${r.ltstcost??'—'}</td>
+      <td style="padding:5px 8px;text-align:center;font-size:10px;font-weight:700;color:${byColor};">${r.matchedBy.toUpperCase()}</td>
+    </tr>`;
+  });
+  if (results.length > 20) html += `<tr><td colspan="5" style="padding:6px 8px;color:var(--muted);font-size:12px;">…and ${results.length-20} more</td></tr>`;
+  html += '</tbody></table></div>';
+  body.innerHTML = html;
+  preview.style.display = 'block';
+}
+
+function processSmartImport() {
+  const text = document.getElementById('pasteArea').value.trim();
+  const msg = document.getElementById('importMsg');
+  if (!text) { msg.innerHTML='<div class="msg err">Please paste data first.</div>'; return; }
+
+  const rows = parseRawPaste(text);
+  const colMap = detectColumns(rows);
+  const results = smartExtract(rows, colMap);
+
+  if (!results.length) {
+    msg.innerHTML='<div class="msg err">⚠️ No matching items found in pasted data. Make sure descriptions or codes are present.</div>';
+    return;
+  }
+
+  let updatedOnhand=0, updatedDelcol=0, updatedCost=0;
+  results.forEach(r => {
+    if (r.onhand !== null) { state[r.name].onhand = r.onhand; updatedOnhand++; }
+    if (r.delcol !== null) { state[r.name].delcol = r.delcol; updatedDelcol++; }
+    if (r.ltstcost !== null) { state[r.name].ltstcost = r.ltstcost; updatedCost++; }
+  });
+
+  markDirty();
+  renderItems();
+  renderEntryTable();
+
+  msg.innerHTML = `<div class="msg ok">
+    ✅ <strong>${results.length} items matched</strong> and updated:<br>
+    On-Hand: ${updatedOnhand} &nbsp;·&nbsp; Del Col: ${updatedDelcol} &nbsp;·&nbsp; Ltst Cost: ${updatedCost}
+  </div>`;
+  document.getElementById('importPreview').style.display='none';
+}
+
+function resetCounts() {
+  if (!confirm('Reset all count and GRV quantities? On-Hand and Del Col values will be kept.')) return;
+  ITEMS_RAW.forEach(item => { state[item.name].count = ''; state[item.name].grv = ''; state[item.name].note = ''; });
+  markDirty();
+  renderItems();
+  renderEntryTable();
+}
+
+// ── EXPORT XLS ───────────────────────────────────────────
+function exportXLS() {
+  const date = new Date().toISOString().slice(0,10);
+  const now = new Date().toLocaleString('en-ZA');
+
+  // Build summary data (counted items only, sorted shorts first)
+  const rows = ITEMS_RAW
+    .filter(item => state[item.name] && state[item.name].count !== '')
+    .map(item => {
+      const s = state[item.name];
+      const iq = IQ_LOOKUP[item.name] || {};
+      const r = calcRecon(item.name);
+      const cost = s.ltstcost ?? iq.ltstcost ?? 0;
+      const randVal = r !== null ? (r * cost) : null;
+      return {
+        'Item Description': item.name,
+        'Code': iq.code || '',
+        'Count Qty': s.count !== '' ? Number(s.count) : '',
+        'GRV': s.grv !== '' ? Number(s.grv) : '',
+        'Net Count (Count-GRV)': s.count !== '' ? (Number(s.count)||0) - (Number(s.grv)||0) : '',
+        'On Hand': s.onhand,
+        'Del Col': s.delcol,
+        'Variance': r !== null ? r : '',
+        'Ltst Cost': cost || '',
+        'Rand Value': randVal !== null ? Math.round(randVal * 100) / 100 : '',
+        'Status': r === null ? 'PENDING' : r < 0 ? 'SHORT' : r > 0 ? 'OVER' : 'MATCH'
+      };
+    })
+    .sort((a, b) => {
+      const av = a['Variance'] === '' ? 0 : a['Variance'];
+      const bv = b['Variance'] === '' ? 0 : b['Variance'];
+      return av - bv;
+    });
+
+  if (!rows.length) { alert('No counted items to export yet.'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  // ── Summary sheet ────────────────────────────────────
+  const ws = XLSX.utils.json_to_sheet(rows, { skipHeader: false });
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:42}, {wch:12}, {wch:10}, {wch:10}, {wch:10},
+    {wch:10}, {wch:10}, {wch:12}, {wch:10}
+  ];
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Recon Summary');
+
+  // ── Totals sheet ────────────────────────────────────
+  const shorts = rows.filter(r => r.Status === 'SHORT');
+  const overs  = rows.filter(r => r.Status === 'OVER');
+  const totals = [
+    ['RECON WILHELM — SUMMARY', '', date],
+    [],
+    ['Total Items Counted', rows.length],
+    ['Shorts', shorts.length],
+    ['Overs',  overs.length],
+    ['Matched', rows.filter(r=>r.Status==='MATCH').length],
+    [],
+    ['Total Short Rand Value', shorts.reduce((a,r)=> a + (r['Rand Value']||0), 0).toFixed(2)],
+    ['Total Over Rand Value',  overs.reduce((a,r)=>  a + (r['Rand Value']||0), 0).toFixed(2)],
+    [],
+    ['Generated', now]
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(totals);
+  ws2['!cols'] = [{wch:28},{wch:14},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Totals');
+
+  XLSX.writeFile(wb, `RECON_WILHELM_${date}.xlsx`);
+}
+
+// ── EXPORT PDF ───────────────────────────────────────────
+function exportPDF() {
+  const date = new Date().toLocaleDateString('en-ZA', {day:'2-digit',month:'short',year:'numeric'});
+  const now  = new Date().toLocaleString('en-ZA');
+
+  const rows = ITEMS_RAW
+    .filter(item => state[item.name] && state[item.name].count !== '')
+    .map(item => {
+      const s = state[item.name];
+      const iq = IQ_LOOKUP[item.name] || {};
+      const r = calcRecon(item.name);
+      const cost = s.ltstcost ?? iq.ltstcost ?? 0;
+      const randVal = r !== null ? Math.round(r * cost * 100) / 100 : null;
+      return { name: item.name, code: iq.code||'', count: s.count, grv: s.grv||'', netCount: (Number(s.count)||0)-(Number(s.grv)||0), onhand: s.onhand, delcol: s.delcol, recon: r, cost, randVal, status: r===null?'PENDING':r<0?'SHORT':r>0?'OVER':'MATCH' };
+    })
+    .sort((a,b) => (a.recon??0) - (b.recon??0));
+
+  if (!rows.length) { alert('No counted items to export yet.'); return; }
+
+  const shorts = rows.filter(r=>r.status==='SHORT');
+  const overs  = rows.filter(r=>r.status==='OVER');
+  const matches= rows.filter(r=>r.status==='MATCH');
+  const totalShortVal = shorts.reduce((a,r)=>a+(r.randVal||0),0);
+  const totalOverVal  = overs.reduce((a,r) =>a+(r.randVal||0),0);
+
+  const fmtN = n => n==null?'—': Number(n).toLocaleString('en-ZA',{minimumFractionDigits:0,maximumFractionDigits:2});
+  const fmtR = n => n==null?'—': 'R '+Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  const tableRows = rows.map(r => {
+    const sc = r.status==='SHORT'?'color:#c0392b;font-weight:700;':r.status==='OVER'?'color:#16a34a;font-weight:700;':'';
+    const reconStr = r.recon===null?'—': r.recon<0?fmtN(r.recon): r.recon>0?'+'+fmtN(r.recon):'✓';
+    const rvStr = r.randVal!==null? (r.randVal<0?'('+fmtR(Math.abs(r.randVal))+')':fmtR(r.randVal)) : '—';
+    return `<tr>
+      <td style="max-width:200px;word-break:break-word;font-size:9pt;">${r.name}</td>
+      <td style="font-size:8pt;color:#666;">${r.code}</td>
+      <td style="text-align:right;">${fmtN(r.count)}</td>
+      <td style="text-align:right;color:#7c3aed;font-weight:600;">${r.grv||'—'}</td>
+      <td style="text-align:right;font-weight:600;">${fmtN(r.netCount)}</td>
+      <td style="text-align:right;">${fmtN(r.onhand)}</td>
+      <td style="text-align:right;">${fmtN(r.delcol)}</td>
+      <td style="text-align:right;${sc}">${reconStr}</td>
+      <td style="text-align:right;${sc}">${rvStr}</td>
+      <td style="text-align:center;font-size:8pt;font-weight:700;${sc}">${r.status}</td>
+    </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>RECON WILHELM ${date}</title>
+<style>
+  @page { size: A4 landscape; margin: 14mm 12mm; }
+  body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; margin:0; }
+  .header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px; border-bottom:2px solid #111; padding-bottom:6px; }
+  .header h1 { font-size:16pt; font-weight:900; letter-spacing:2px; margin:0; }
+  .header .meta { font-size:8pt; color:#555; text-align:right; }
+  .stats { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:12px; }
+  .stat { border:1px solid #ddd; border-radius:4px; padding:6px 10px; text-align:center; }
+  .stat .n { font-size:16pt; font-weight:800; }
+  .stat .l { font-size:7pt; text-transform:uppercase; letter-spacing:1px; color:#666; }
+  .stat.sh .n { color:#c0392b; }
+  .stat.ov .n { color:#16a34a; }
+  table { width:100%; border-collapse:collapse; font-size:9pt; }
+  thead tr { background:#1a1a2e; color:#fff; }
+  thead th { padding:5px 7px; text-align:left; font-size:8pt; letter-spacing:.5px; text-transform:uppercase; }
+  thead th:nth-child(n+3) { text-align:right; }
+  thead th:last-child { text-align:center; }
+  tbody tr:nth-child(even) { background:#f8f8f8; }
+  tbody tr.short-r { background:#fef2f2; }
+  tbody tr.over-r  { background:#f0fdf4; }
+  tbody td { padding:4px 7px; border-bottom:1px solid #eee; vertical-align:top; }
+  tbody td:nth-child(n+3) { text-align:right; }
+  tbody td:last-child { text-align:center; }
+  .totals { margin-top:12px; display:flex; gap:20px; font-size:9pt; }
+  .totals div { border:1px solid #ddd; border-radius:4px; padding:6px 14px; }
+  .totals .lbl { font-size:7pt; text-transform:uppercase; letter-spacing:1px; color:#666; }
+  .totals .val { font-size:12pt; font-weight:800; margin-top:2px; }
+  .totals .short-v .val { color:#c0392b; }
+  .totals .over-v  .val { color:#16a34a; }
+  .footer { margin-top:10px; font-size:7pt; color:#999; text-align:right; }
+  @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style></head><body>
+<div class="header">
+  <div><h1>RECON · WILHELM</h1><div style="font-size:9pt;color:#555;margin-top:2px;">Stock Reconciliation Report — ${date}</div></div>
+  <div class="meta">Generated: ${now}<br>Total items counted: ${rows.length}</div>
+</div>
+<div class="stats">
+  <div class="stat sh"><div class="n">${shorts.length}</div><div class="l">🔴 Shorts</div></div>
+  <div class="stat ov"><div class="n">${overs.length}</div><div class="l">🟢 Overs</div></div>
+  <div class="stat"><div class="n">${matches.length}</div><div class="l">✅ Matched</div></div>
+  <div class="stat short-v"><div class="n" style="color:#c0392b;font-size:11pt;">${fmtR(totalShortVal)}</div><div class="l">Short Value</div></div>
+  <div class="stat over-v"><div class="n"  style="color:#16a34a;font-size:11pt;">${fmtR(totalOverVal)}</div><div class="l">Over Value</div></div>
+</div>
+<table>
+  <thead><tr>
+    <th>Description</th><th>Code</th><th>Count</th><th style="color:#7c3aed;">GRV</th><th>Net Count</th><th>On Hand</th><th>Del Col</th><th>Variance</th><th>Rand Value</th><th>Status</th>
+  </tr></thead>
+  <tbody>${tableRows}</tbody>
+</table>
+<div class="footer">RECON WILHELM · ${now} · Page <span class="pageNum"></span></div>
+</body></html>`;
+
+  const win = window.open('','_blank','width=1100,height=800');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => { win.focus(); win.print(); };
+}
+
+// ── EXPORT CSV ───────────────────────────────────────────
+function exportCSV() {
+  const date = new Date().toISOString().slice(0,10);
+  let csv = 'Item,Code,Count,GRV,Net Count,On Hand,Del Col,Ltst Cost,Recon,Status,Note\n';
+  ITEMS_RAW.forEach(item => {
+    const s = state[item.name];
+    const iq = IQ_LOOKUP[item.name] || {};
+    const r = calcRecon(item.name);
+    const netCount = s.count !== '' ? (Number(s.count)||0) - (Number(s.grv)||0) : '';
+    const status = r===null?'PENDING':r<0?'SHORT':r>0?'OVER':'MATCH';
+    csv += `"${item.name}","${iq.code||''}","${s.count}","${s.grv||''}","${netCount}","${s.onhand}","${s.delcol}","${s.ltstcost??iq.ltstcost??''}","${r??''}","${status}","${s.note||''}"\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`RECON_WILHELM_${date}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── DATE DISPLAY ─────────────────────────────────────────
+function setDate() {
+  const now = new Date();
+  const d = now.toLocaleDateString('en-ZA', {weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  const t = now.toLocaleTimeString('en-ZA', {hour:'2-digit',minute:'2-digit'});
+  document.getElementById('dateDisplay').innerHTML = `${d}<br>${t}`;
+}
+
+// ── INIT ─────────────────────────────────────────────────
+setDate();
+setInterval(setDate, 30000);
+setInterval(() => { if (dirty > 0 && !syncEnabled) saveSession(); }, 120000);
+
+// Auto-connect if config already saved, otherwise show setup
+(async () => {
+  const cfg = getFbConfig();
+  if (cfg) {
+    setSyncStatus('syncing', 'Reconnecting…');
+    const ok = await initFirebase(cfg);
+    if (!ok) {
+      // Config exists but failed — let them retry or skip
+      initState(null);
+      renderItems();
+      renderEntryTable();
+      updateStats();
+    }
+  } else {
+    // First time — show setup overlay, pre-populate items in background
+    initState(null);
+    renderItems();
+    renderEntryTable();
+    updateStats();
+    showSetupOverlay();
+  }
+})();
+</script>
+</body>
+</html>
